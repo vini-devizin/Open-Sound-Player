@@ -6,17 +6,12 @@
 #include <poll.h>
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
+#include "player.h"
+#include "music_lib.h"
 
-int alpha_sort(const void *a, const void *b) {
-  const char *music_a = *(const char **)a;
-  const char *music_b = *(const char **)b;
-
-  return strcmp(music_a, music_b);
-}
-
-void start_sound(ma_engine *engine, ma_sound *sound, int index, char *music, char **musics) {
+/*void start_sound(ma_engine *engine, ma_sound *sound, int index, char *music, char **musics) {
   snprintf(music, 100, "Musics/%s", musics[index]);
-  printf("Tocando agora: %s\n", musics[index]);
+  printf("\n> Tocando agora: %s\n", musics[index]);
 
   ma_result result = ma_sound_init_from_file(engine, music, 0, NULL, NULL, sound);
   if (result != MA_SUCCESS) {
@@ -24,7 +19,7 @@ void start_sound(ma_engine *engine, ma_sound *sound, int index, char *music, cha
     return;
   }
   ma_sound_start(sound);
-}
+}*/
 
 int main() {
   struct pollfd pfd = {
@@ -129,6 +124,7 @@ int main() {
         ma_sound_set_looping(&sound, MA_FALSE);
       }
       printf("> ");
+      fflush(stdout);
     }
   }
 
