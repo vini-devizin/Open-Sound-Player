@@ -1,5 +1,5 @@
 #include <stdio.h>
-//#define MINIAUDIO_IMPLEMENTATION
+#define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 
 void start_sound(ma_engine *engine, ma_sound *sound, int index, char *music, char **musics) {
@@ -12,4 +12,14 @@ void start_sound(ma_engine *engine, ma_sound *sound, int index, char *music, cha
     return;
   }
   ma_sound_start(sound);
+}
+
+void next_sound(ma_engine *engine, ma_sound *sound, int *index, size_t length, char *music, char **musics) {
+  ma_sound_uninit(sound);
+  if ((size_t)(*index) - 1 >= length - 1) {
+    *index = 1;
+  } else {
+    (*index)++;
+  }
+  start_sound(engine, sound, *index - 1, music, musics);
 }

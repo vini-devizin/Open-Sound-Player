@@ -4,22 +4,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <poll.h>
-#define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 #include "player.h"
 #include "music_lib.h"
-
-/*void start_sound(ma_engine *engine, ma_sound *sound, int index, char *music, char **musics) {
-  snprintf(music, 100, "Musics/%s", musics[index]);
-  printf("\n> Tocando agora: %s\n", musics[index]);
-
-  ma_result result = ma_sound_init_from_file(engine, music, 0, NULL, NULL, sound);
-  if (result != MA_SUCCESS) {
-    printf("Erro ao inicar som: %s\n", ma_result_description(result));
-    return;
-  }
-  ma_sound_start(sound);
-}*/
 
 int main() {
   struct pollfd pfd = {
@@ -36,42 +23,17 @@ int main() {
     return 1;
   }
 
-  struct dirent *entry;
   size_t count = 0;
   size_t capacity = 4;
   char **musics = malloc(capacity * sizeof(*musics));
 
-  printf("Open Player\n");
+  printf("Open Sound Player\n");
 
-  while ((entry = readdir(dir)) != NULL) {
-    size_t length = strlen(entry->d_name);
-    if (length > 4 && strcmp(entry->d_name + length - 4, ".mp3") == 0) {
-      if (count == capacity) {
-        capacity *= 2;
-        char **tmp = realloc(musics, capacity * sizeof(*musics));
-
-        if (tmp == NULL) {
-          printf("Erro ao realocar\n");
-        } else {
-          musics = tmp;
-        }
-      }
-      
-      musics[count] = strdup(entry->d_name);
-
-      if (musics[count] == NULL) {
-        printf("Erro ao alocar\n");
-      } else {
-        count++;
-      }
-    }
-  }
+  read_musics(&musics, dir, &capacity, &count);
 
   qsort(musics, count, sizeof(*musics), alpha_sort);
 
-  for (size_t i = 0; i < count; i++) {
-    printf("%zu - %s\n", i + 1, musics[i]);
-  }
+  list_musics(musics, count);
 
   result = ma_engine_init(NULL, &engine);
   if (result != MA_SUCCESS) {
@@ -98,13 +60,7 @@ int main() {
 
     if (poll_res == 0) {
       if (ma_sound_at_end(&sound)) {
-        ma_sound_uninit(&sound);
-        if ((size_t)opt - 1 >= count - 1) {
-          opt = 1;
-        } else {
-          opt++;
-        }
-        start_sound(&engine, &sound, opt - 1, music, musics);
+        next_sound(&engine, &sound, &opt, count, music, musics);
       }
     }
 
@@ -122,6 +78,10 @@ int main() {
         ma_sound_set_looping(&sound, MA_TRUE);
       } else if (strcmp(cmd, "noloop") == 0) {
         ma_sound_set_looping(&sound, MA_FALSE);
+      } else if (strcmp(cmd, "list") == 0) {
+        list_musics(musics, count);
+      } else if (strcmp(cmd, "next") == 0) {
+        next_sound(&engine, &sound, &opt, count, music, musics);
       }
       printf("> ");
       fflush(stdout);
