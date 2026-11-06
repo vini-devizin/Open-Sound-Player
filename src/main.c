@@ -1,11 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <dirent.h>
 #include <string.h>
 #include <unistd.h>
 #include <poll.h>
-#include "miniaudio.h"
 #include "player.h"
 #include "music_lib.h"
 
@@ -14,10 +12,8 @@ int main() {
     .fd = STDIN_FILENO,
     .events = POLLIN
   };
+  Player *player = create_player();
   DIR *dir = opendir("Musics");
-  ma_result result;
-  ma_engine engine;
-  ma_sound sound;
   size_t count = 0;
   size_t capacity = 4;
   char **musics = malloc(capacity * sizeof(*musics));
@@ -26,33 +22,24 @@ int main() {
   qsort(musics, count, sizeof(*musics), alpha_sort);
   char cmd[50];
   int opt;
-  bool sound_initialized = false;
 
   if (dir == NULL) {
     printf("Erro ao abrir diretório\n");
     return 1;
   }
 
-  result = ma_engine_init(NULL, &engine);
-  if (result != MA_SUCCESS) {
-    return -1;
-  }
-
   printf("Open Sound Player\n");
   printf("Escolha a música\n> ");
   while (1) {
     list_musics(musics, count);
-    scanf("%99s", cmd);
+    scanf("%49s", cmd);
     if (strtol(cmd, NULL, 10)) {
-      if (handle_start_sound(&engine, &sound, strtol(cmd, NULL, 10), count, music, musics, &sound_initialized)) {
+      if (handle_start_sound(player, strtol(cmd, NULL, 10), count, music, musics)) {
         opt = strtol(cmd, NULL, 10);
         break;
       }
     }
   }
-  /*scanf("%d", &opt);
-  getchar();
-  start_sound(&engine, &sound, opt - 1, music, musics);*/
   printf("> ");
   fflush(stdout);
 
@@ -65,8 +52,8 @@ int main() {
     }
 
     if (poll_res == 0) {
-      if (ma_sound_at_end(&sound)) {
-        next_sound(&engine, &sound, &opt, count, music, musics, &sound_initialized);
+      if (sound_end(player)) {
+        next_sound(player, &opt, count, music, musics);
       }
     }
 
@@ -77,20 +64,20 @@ int main() {
       if (strcmp(cmd, "quit") == 0) {
         break;
       } else if (strcmp(cmd, "pause") == 0) {
-        ma_sound_stop(&sound);
+        stop_sound(player);
       } else if (strcmp(cmd, "resume") == 0) {
-        ma_sound_start(&sound);
+        resume_sound(player);
       } else if (strcmp(cmd, "loop") == 0) {
-        ma_sound_set_looping(&sound, MA_TRUE);
+        loop_sound(player);
       } else if (strcmp(cmd, "noloop") == 0) {
-        ma_sound_set_looping(&sound, MA_FALSE);
+        noloop_sound(player);
       } else if (strcmp(cmd, "list") == 0) {
         list_musics(musics, count);
       } else if (strcmp(cmd, "next") == 0) {
-        next_sound(&engine, &sound, &opt, count, music, musics, &sound_initialized);
+        next_sound(player, &opt, count, music, musics);
       } else if (strncmp(cmd, "play", 4) == 0) {
         if (strtol(cmd + 5, NULL, 10)) {
-          if (handle_start_sound(&engine, &sound, strtol(cmd + 5, NULL, 10), count, music, musics, &sound_initialized)) {
+          if (handle_start_sound(player, strtol(cmd + 5, NULL, 10), count, music, musics)) {
             opt = strtol(cmd + 5, NULL, 10);
           }
         }
@@ -100,8 +87,7 @@ int main() {
     }
   }
 
-  ma_sound_uninit(&sound);
-  ma_engine_uninit(&engine);
+  free_player(player);
   closedir(dir);
   for (size_t i = 0; i < count; i++) {
     free(musics[i]);
